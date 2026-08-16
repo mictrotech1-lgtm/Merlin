@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MICTROTECH · LABORATORIO DE IA</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050508">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root { --verde: #00FF88; --azul: #00D4FF; --fondo: #050508; }
+
+html, body {
+  background: var(--fondo);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  height: 100%;
+  overflow-y: auto; /* SCROLL PARA TVBOX */
+  scroll-behavior: smooth;
+}
+
+/* FOCO PARA CONTROL REMOTO */
+*:focus {
+  outline: 3px solid var(--verde);
+  outline-offset: 2px;
+  box-shadow: 0 0 20px var(--verde);
+}
+
+.header {
+  width: 100%;
+  background: #fff;
+  min-height: 35vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo {
+  width: 100%;
+  max-height: 35vh;
+  object-fit: contain;
+}
+
+.scanner-line {
+  width: 100%;
+  height: 4px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.scanner-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--verde), transparent);
+  box-shadow: 0 0 15px var(--verde), 0 0 30px var(--verde);
+  animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+ 0% { left: -100%; }
+ 100% { left: 100%; }
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 20px 120px 20px; /* ESPACIO ABAJO PARA BOTON FLOTANTE */
+  min-height: calc(100vh - 35vh - 4px);
+}
+
+h1 {
+  color: var(--azul);
+  font-size: 1.3rem;
+  text-align: center;
+  font-weight: bold;
+  margin-top: 20px;
+  line-height: 1.5;
+  text-shadow: 0 0 10px var(--azul), 0 0 20px var(--azul);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+ 0%, 100% { opacity: 1; transform: scale(1); }
+ 50% { opacity: 0.7; transform: scale(1.03); }
+}
+
+.selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 30px;
+  width: 90%;
+  max-width: 420px;
+}
+
+.btn {
+  background: #1F2937;
+  border: 2px solid var(--azul);
+  color: #fff;
+  padding: 18px 0;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  cursor: pointer;
+}
+
+.btn:hover, .btn:focus { 
+  background: var(--azul);
+  color: var(--fondo); 
+  box-shadow: 0 0 20px var(--azul);
+  transform: scale(1.03);
+}
+
+.btn-verde { 
+  background: var(--verde); 
+  color: #000; 
+  box-shadow: 0 0 20px var(--verde); 
+}
+.btn-verde:hover, .btn-verde:focus {
+  background: var(--verde);
+  box-shadow: 0 0 30px var(--verde);
+}
+
+/* MENÚS OCULTOS */
+#asistente, #productos { display: none; margin-top: 25px; width: 90%; max-width: 420px; }
+
+#productos { 
+  display: none; 
+  flex-wrap: wrap; 
+  justify-content: center;
+  gap: 12px;
+}
+#productos .btn { 
+  background: #0B1220; 
+  border-color: var(--verde);
+  padding: 14px 20px;
+  min-width: 140px;
+}
+#productos .btn:hover, #productos .btn:focus {
+  background: var(--verde);
+  color: var(--fondo);
+  box-shadow: 0 0 20px var(--verde);
+}
+
+/* BOTÓN FLOTANTE CHAT */
+.chat-float {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--verde);
+  color: #000;
+  padding: 16px 20px;
+  border-radius: 50px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 0 25px var(--verde);
+  z-index: 998;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+}
+
+/* ===== VENTANA DE CHAT ===== */
+#chat-merlin {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 90%;
+  max-width: 380px;
+  height: 480px;
+  background: #0a0a0a;
+  border: 2px solid var(--verde);
+  border-radius: 16px;
+  z-index: 999;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0,255,136,0.3);
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid #222;
+  background: #111;
+  border-radius: 14px 14px 0 0;
+}
+.chat-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: url('merlin.jpg') center/cover; /* PONÉ TU IMAGEN ACÁ */
+  border: 2px solid var(--verde);
+  box-shadow: 0 0 10px var(--verde);
+}
+.chat-nombre { font-weight: bold; color: var(--verde); font-size: 14px; }
+.chat-estado { font-size: 11px; color: #aaa; }
+.btn-cerrar {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--verde);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.chat-mensajes {
+  flex: 1;
+  overflow-y: auto; /* SCROLL DENTRO DEL CHAT */
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+.msg.yo { background: #1c2c3c; align-self: flex-end; border-bottom-right-radius: 4px; border-left: 2px solid var(--azul); }
+.msg.bot { background: #151515; align-self: flex-start; border-bottom-left-radius: 4px; border-left: 2px solid var(--verde); }
+
+.chat-input {
+  display: flex; gap: 8px; padding: 12px; border-top: 1px solid #222;
+}
+.chat-input input {
+  flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid #333;
+  background: #111; color: white; outline: none; font-size: 14px;
+}
+.chat-input button {
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, var(--azul), var(--verde));
+  color: black; font-weight: bold; font-size: 18px; cursor: pointer;
+}
+
+/* SCROLLBAR PARA TV */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: var(--verde); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.png" alt="MICTROTECH" class="logo">
+</div>
+
+<div class="scanner-line"></div>
+
+<div class="content">
+  <h1>LABORATORIO DE INTELIGENCIA<br>ARTIFICIAL CON 💚</h1>
+
+  <button onclick="abrirChat()" class="btn btn-verde" style="margin-top:20px;width:90%;max-width:420px">
+    💬 HABLAR CON MERLÍN AHORA
+  </button>
+
+  <div class="selector">
+    <button class="btn" onclick="mostrarProductos()">Productos</button>
+    <button class="btn">Servicios</button>
+    <button class="btn" onclick="mostrarEdu()">Educación</button>
+    <a href="https://wa.me/541125958095" target="_blank" class="btn">Contactos</a>
+  </div>
+
+  <div id="productos">
+    <button class="btn">CABALLERO NEGRO</button>
+    <button class="btn">LA FORTALEZA</button>
+    <button class="btn">LAUNCHER</button>
+    <button class="btn" onclick="abrirChat()">MERLIN</button>
+    <button class="btn">SALOMON</button>
+  </div>
+
+  <div id="asistente">
+    <button class="btn">🎓 Asistente Escolar IA</button>
+  </div>
+</div>
+
+<!-- BOTÓN FLOTANTE -->
+<button onclick="abrirChat()" class="chat-float">💬 CHAT</button>
+
+<!-- VENTANA DE CHAT -->
+<div id="chat-merlin">
+  <div class="chat-header">
+    <div class="chat-avatar"></div>
+    <div>
+      <div class="chat-nombre">MERLÍN MICTROTECH</div>
+      <div class="chat-estado">En línea · Anciano Cyber</div>
+    </div>
+    <button onclick="cerrarChat()" class="btn-cerrar">✕</button>
+  </div>
+  <div class="chat-mensajes" id="zona-chat">
+    <div class="msg bot">Saludos. Soy Merlín. ¿En qué te ayudo hoy? ⚡</div>
+  </div>
+  <div class="chat-input">
+    <input type="text" id="texto" placeholder="Escribí tu mensaje...">
+    <button onclick="enviar()">➤</button>
+  </div>
+</div>
+
+<script>
+function cerrarMenus() {
+  document.getElementById('productos').style.display = 'none';
+  document.getElementById('asistente').style.display = 'none';
+}
+function mostrarEdu() {
+  if(document.getElementById('asistente').style.display === 'block') cerrarMenus();
+  else { cerrarMenus(); document.getElementById('asistente').style.display = 'block'; }
+}
+function mostrarProductos() {
+  if(document.getElementById('productos').style.display === 'flex') cerrarMenus();
+  else { cerrarMenus(); document.getElementById('productos').style.display = 'flex'; }
+}
+
+// FUNCIONES DEL CHAT
+function abrirChat() {
+  cerrarMenus();
+  document.getElementById('chat-merlin').style.display = 'flex';
+  document.getElementById('texto').focus(); // FOCO PARA TV
+}
+function cerrarChat() {
+  document.getElementById('chat-merlin').style.display = 'none';
+}
+
+async function enviar(){
+    let t = document.getElementById("texto").value.trim();
+    if(!t) return;
+    let zona = document.getElementById("zona-chat");
+    zona.innerHTML += `<div class="msg yo">${t}</div>`;
+    document.getElementById("texto").value = "";
+    zona.scrollTop = zona.scrollHeight; // AUTO SCROLL
+
+    setTimeout(() => {
+      zona.innerHTML += `<div class="msg bot">Merlín: Recibí "${t}". Próximamente te respondo con IA posta.</div>`;
+      zona.scrollTop = zona.scrollHeight;
+    }, 600);
+}
+
+document.getElementById("texto").addEventListener("keydown", e=>{
+    if(e.key=="Enter") enviar();
+});
+
+// NAVEGACION CON FLECHAS PARA TVBOX
+document.addEventListener('keydown', function(e) {
+  if(e.key === 'Escape') cerrarChat();
+});
+</script>
+</body>
+</html>
