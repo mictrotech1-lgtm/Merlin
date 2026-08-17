@@ -195,4 +195,4 @@ def chat():
 
 if __name__ == "__main__":
     print("✅ MERLÍN MICTROTECH ONLINE | DEMO MODE")
-    app.run(host="0.0.0.0", port=14557, debug=False)
+    app.run(host="0.0.0.0", port=10000, debug=False)
