@@ -18,7 +18,7 @@ sesion_activa = {
 }
 
 def cargar_conocimiento():
-    sab_path = os.path.join(BASE_DIR, "mictrotech.sab.txt")
+    sab_path = os.path.join(BASE_DIR, "mictrotech.sab")
     conocimiento = {}
     if os.path.exists(sab_path):
         with open(sab_path, "r", encoding="utf-8") as f:
