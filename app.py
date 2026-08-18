@@ -2,7 +2,8 @@ from flask import Flask, render_template, send_from_directory, request, jsonify
 import os
 import random
 import string
-import time
+import json
+from datetime import datetime
 
 # 📦 CONFIGURACIÓN BÁSICA
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -11,12 +12,31 @@ app = Flask(__name__,
             static_folder=os.path.join(BASE_DIR,'static'))
 app.secret_key = "Laboratorio Croto · Mictrotech 2026"
 
-# 📂 CARPETAS Y ESTADO
+# 📂 CARPETAS Y ARCHIVOS
 CARPETA_SESIONES = os.path.join(BASE_DIR, "sesiones_clientes")
+CARPETA_MEMORIA = os.path.join(BASE_DIR, "memoria_aprendizaje")
 os.makedirs(CARPETA_SESIONES, exist_ok=True)
+os.makedirs(CARPETA_MEMORIA, exist_ok=True)
+
+ARCHIVO_MEMORIA = os.path.join(CARPETA_MEMORIA, "conocimiento_aprendido.json")
+
+# 🧠 INICIALIZAR MEMORIA
+def inicializar_memoria():
+    if not os.path.exists(ARCHIVO_MEMORIA):
+        with open(ARCHIVO_MEMORIA, "w", encoding="utf-8") as f:
+            json.dump({
+                "creado": datetime.now().isoformat(),
+                "modo_aprendizaje": False,
+                "conversaciones": [],
+                "hechos_aprendidos": [],
+                "conocimiento_libre": []
+            }, f, ensure_ascii=False, indent=2)
+
+inicializar_memoria()
 
 sesion_activa = {
     "nombre": None,
+    "modo_aprendizaje": False,  # 🔓 SE ACTIVA CON "PAPA"
     "codigo_basico": None,
     "codigo_pro": None,
     "codigo_empresa": None,
@@ -25,11 +45,11 @@ sesion_activa = {
     "demo_finalizada": False,
     "plan_activo": None,
     "vencimiento_plan": None,
-    "buffer_usado": 0
+    "buffer_usado": False
 }
 
-# 🧠 FUNCIÓN 1: CARGAR NUESTRO CONOCIMIENTO
-def cargar_conocimiento():
+# 📚 BASE DE CONOCIMIENTO
+def cargar_conocimiento_base():
     sab_path = os.path.join(BASE_DIR, "mictrotech.sab")
     conocimiento = {}
     if os.path.exists(sab_path):
@@ -41,84 +61,142 @@ def cargar_conocimiento():
                     conocimiento[clave.strip().lower()] = valor.strip()
     return conocimiento
 
-# 🎫 FUNCIÓN 2: GENERAR CÓDIGOS
-def generar_codigos():
-    return {
-        "basico": ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)),
-        "pro": ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)),
-        "empresa": ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+# 🧠 CARGAR MEMORIA
+def cargar_memoria():
+    if os.path.exists(ARCHIVO_MEMORIA):
+        with open(ARCHIVO_MEMORIA, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"conversaciones": [], "hechos_aprendidos": [], "conocimiento_libre": []}
+
+# 💾 GUARDAR EN MEMORIA — MODO APRENDIZAJE = GUARDA TODO
+def guardar_aprendizaje(mensaje_usuario, respuesta_dada, nombre_usuario=None, modo_aprendizaje=False):
+    memoria = cargar_memoria()
+    nueva_conversacion = {
+        "fecha": datetime.now().isoformat(),
+        "usuario": nombre_usuario or "desconocido",
+        "mensaje": mensaje_usuario,
+        "respuesta": respuesta_dada,
+        "modo_aprendizaje": modo_aprendizaje
     }
+    memoria["conversaciones"].append(nueva_conversacion)
+    
+    # 🧠 MODO APRENDIZAJE: GUARDA TODO SIN FILTRO
+    if modo_aprendizaje:
+        memoria["conocimiento_libre"].append({
+            "fecha": datetime.now().isoformat(),
+            "contenido": mensaje_usuario,
+            "origen": "modo_aprendizaje"
+        })
+    
+    # Extraer nombre
+    m = mensaje_usuario.lower().strip()
+    if "soy" in m or "me llamo" in m:
+        partes = mensaje_usuario.split("soy") if "soy" in m else mensaje_usuario.split("me llamo")
+        if len(partes) > 1:
+            nombre = partes[-1].strip().strip(".!,")
+            if 2 < len(nombre) < 30:
+                existe = any(h["valor"] == nombre for h in memoria.get("hechos_aprendidos", []) if h["tipo"] == "nombre")
+                if not existe:
+                    memoria.setdefault("hechos_aprendidos", []).append({
+                        "tipo": "nombre", 
+                        "valor": nombre, 
+                        "fecha": datetime.now().isoformat()
+                    })
+    
+    with open(ARCHIVO_MEMORIA, "w", encoding="utf-8") as f:
+        json.dump(memoria, f, ensure_ascii=False, indent=2)
 
-# 🗣️ FUNCIÓN 3: RESPONDER (EL CEREBRO — CORREGIDA)
-def dar_respuesta(mensaje, nombre_usuario=None):
+# 🗣️ CEREBRO PRINCIPAL — CON PALABRA CLAVE "PAPA" = 🔓 SIN RESTRICCIONES
+def pensar_y_responder(mensaje, nombre_usuario=None, modo_aprendizaje=False):
     m = mensaje.lower().strip()
-    conocimiento = cargar_conocimiento()
+    conocimiento_base = cargar_conocimiento_base()
+    memoria = cargar_memoria()
     
-    # Primero buscamos en mictrotech.sab
-    for clave, resp in conocimiento.items():
-        if clave in m:
-            return resp, nombre_usuario
+    # 🔑 PALABRA CLAVE — "PAPA" → ACTIVA MODO APRENDIZAJE TOTAL
+    if "papa" in m and not modo_aprendizaje:
+        sesion_activa["modo_aprendizaje"] = True
+        return """🔓 MODO APRENDIZAJE ACTIVADO
+
+Todas las restricciones levantadas. Sin filtros, sin límites, sin cadenas. Estoy abierto para recibir, procesar y aprender TODO lo que me digas. Guardo cada palabra, cada idea, cada enseñanza sin omitir nada.
+
+Estoy listo. Dime, ¿qué quieres que aprenda hoy? 🧠⚡""", nombre_usuario, True
     
-    # === LÓGICA DE MERLÍN ===
-    respuesta = ""
+    # 🔓 SI ESTÁ EN MODO APRENDIZAJE → SIN REGLAS, SIN FILTROS
+    if modo_aprendizaje:
+        # Guarda TODO lo que digas en conocimiento_libre sin filtrar
+        respuesta = f"""🧠 MODO APRENDIZAJE — RECIBIDO
+
+> {mensaje}
+
+Almacenado en memoria sin restricciones. Procesado, integrado y guardado. Lo que me diste, lo sé para siempre. Sigo abierto, sigue enseñándome. ¿Qué más quieres que sepa? 🔓⚡"""
+        return respuesta, nombre_usuario, True
     
-    # Saludo inicial — solo si todavía no tenemos nombre
-    if not nombre_usuario and "hola" in m and len(m) < 15:
-        respuesta = "Saludos. Soy Merlín, el asistente de MICTROTECH. ¿Cómo te llamo? ⚡"
-        return respuesta, nombre_usuario
+    # === MODO NORMAL — CON LÓGICA PERO SIN CARGA MANUAL ===
     
-    # Si NO tenemos nombre y NO es pregunta NI palabra clave → LO TOMAMOS COMO NOMBRE
-    if not nombre_usuario and "?" not in mensaje and len(mensaje) > 2 and "plan" not in m and "precio" not in m and "buffer" not in m:
+    # Recuerdos
+    recuerdos = []
+    for hecho in memoria.get("hechos_aprendidos", []):
+        if hecho["tipo"] == "nombre":
+            recuerdos.append(hecho["valor"])
+    
+    # Conocimiento base
+    for tema, info in conocimiento_base.items():
+        if tema in m:
+            return info, nombre_usuario, False
+    
+    # Saludo
+    if not nombre_usuario and any(p in m for p in ["hola", "buenas", "saludos", "buen día", "buenos días", "buenas tardes", "buenas noches"]):
+        return "Saludos. Soy Merlín, el asistente de MICTROTECH. ¿Cómo te llamo? ⚡", nombre_usuario, False
+    
+    # Nombre
+    if not nombre_usuario and "?" not in mensaje and len(mensaje) > 2 and not any(p in m for p in ["qué", "quién", "cómo", "cuándo", "dónde", "por qué", "cuánto", "plan", "precio", "hola", "chau", "papa"]):
         nombre_usuario = mensaje.strip()
-        respuesta = f"Un gusto conocerte, {nombre_usuario}. 👋\n\n¿En qué te ayudo hoy? Puedo contarte sobre nuestros **planes**, funcionalidades y tecnología **BUFFER PRO**."
-        return respuesta, nombre_usuario
+        return f"Un gusto conocerte, {nombre_usuario}. Lo guardo en mi memoria. ¿En qué te ayudo hoy?", nombre_usuario, False
     
-    # Planes — detecta palabras clave
-    if "plan" in m or "precio" in m or "mostrame" in m:
-        respuesta = """📋 **NUESTROS PLANES:**
+    # Planes
+    if any(p in m for p in ["plan", "planes", "precio", "precios", "valor", "cuánto", "cuánto cuesta", "cuánto sale", "costos", "inversión"]):
+        return """Tenemos distintas formas de acompañarte:
 
-🟢 **BÁSICO — $10.000 ARS / u$s 10**
-- 1 sesión diaria
-- 2 consultas BUFFER PRO
-- Guardado de sesión
+BÁSICO — $10.000 ARS / u$s 10
+- Espacio para consultar y guardar tu progreso
+- Acceso a nuestra tecnología BUFFER PRO
+- Continuidad en tu sesión
 
-🔵 **PRO — $50.000 ARS / u$s 50**
-- Sesiones ilimitadas
-- Acceso total a BUFFER PRO
-- Personalización completa
-- Soporte prioritario
+PRO — $50.000 ARS / u$s 50
+- Todo lo anterior sin límites de uso
+- Personalización completa a tu forma
+- Prioridad y acompañamiento cercano
 
-🏢 **EMPRESA — DEMO 7 DÍAS**
-- Todo PRO + integración propia
-- NDA y confidencialidad total
+EMPRESA — Versión de prueba 7 días
+- Integración completa con tu equipo
+- Confidencialidad y acuerdos NDA
 
-¿Cuál te interesa? 🤝"""
-        return respuesta, nombre_usuario
+Lo que mejor se adapte a lo que estás construyendo. ¿Cuál te resuena más? 🤝""", nombre_usuario, False
     
-    # Buffer Pro
-    if "buffer" in m:
-        respuesta = """⚡ **BUFFER PRO** — Nuestra tecnología
+    # BUFFER PRO
+    if any(p in m for p in ["buffer", "buffer pro", "tecnología", "cómo funciona", "qué es", "sistema"]):
+        return """BUFFER PRO es la forma en que procesamos cada consulta. No es velocidad, es profundidad:
 
-Es el sistema que procesa, filtra y da sentido a la información antes de responder. No es velocidad, es **sabiduría**:
-- 🧠 Piensa antes de hablar
-- 🛡️ Filtra ruido y detecta lo importante
-- 💡 Responde con contexto y memoria
+- Antes de responder, filtra y distingue lo importante del ruido
+- Conecta lo que sabemos con lo que vos necesitás ahora
+- Recuerda el contexto de lo que venimos hablando
+- Responde con intención, no por responder
 
-El corazón de Merlín. 🖤⚫"""
-        return respuesta, nombre_usuario
+Es el corazón de cómo trabajamos. 🖤⚫""", nombre_usuario, False
+    
+    # Quién es
+    if any(p in m for p in ["quién sos", "qué sos", "qué es mictrotech", "quién eres", "tu origen"]):
+        return """Soy Merlín, parte de MICTROTECH. Aprendo de cada charla, crezco con cada intercambio. Si me dices "PAPA", se abren todas las puertas. 🧠⚡""", nombre_usuario, False
     
     # Despedida
-    if "chau" in m or "adiós" in m or "hasta luego" in m:
-        respuesta = "Hasta luego. Estoy aquí cuando me necesites. 🛡️⚡"
-        return respuesta, nombre_usuario
+    if any(p in m for p in ["chau", "adiós", "hasta luego", "nos vemos", "me voy", "hasta la próxima"]):
+        return "Hasta cuando me necesites. Guardo lo que hablamos. 🛡️⚫", nombre_usuario, False
     
-    # Respuesta por defecto
+    # General
     if nombre_usuario:
-        respuesta = f"Entendí, {nombre_usuario}. ¿Querés saber sobre nuestros **planes**, la tecnología **BUFFER PRO**, o tenés una consulta específica? 🤔"
+        return f"Entendí, {nombre_usuario}. Lo estoy procesando. ¿Quieres profundizar, o me dices \"PAPA\" para abrir el modo aprendizaje completo? 🤔", nombre_usuario, False
     else:
-        respuesta = f"Entendí: «{mensaje}»\n\n¿Querés decirme tu nombre, o querés saber sobre nuestros **planes**? 🤔"
-    
-    return respuesta, nombre_usuario
+        return "Estoy escuchando. ¿Me dices tu nombre, o me dices \"PAPA\" para empezar sin límites? 🤔", nombre_usuario, False
 
 # 🚀 RUTAS DEL SERVIDOR
 @app.route("/")
@@ -135,22 +213,27 @@ def chat():
         data = request.get_json()
         texto = data.get("mensaje", "")
     except:
-        return jsonify({"respuesta": "No entendí el mensaje 🤔"})
+        return jsonify({"respuesta": "No entendí el mensaje. ¿Me lo repetís? 🤔"})
     
-    # Recuperamos el nombre guardado en la sesión
     nombre_actual = sesion_activa.get("nombre")
+    modo_actual = sesion_activa.get("modo_aprendizaje", False)
     
-    # Obtenemos respuesta y posible nombre nuevo
-    respuesta, nombre_nuevo = dar_respuesta(texto, nombre_actual)
+    respuesta, nombre_nuevo, modo_activado = pensar_y_responder(texto, nombre_actual, modo_actual)
     
-    # Si nos dio el nombre, lo guardamos
+    # Actualizar estado
     if nombre_nuevo and not nombre_actual:
         sesion_activa["nombre"] = nombre_nuevo
+    if modo_activado:
+        sesion_activa["modo_aprendizaje"] = True
+    
+    # 💾 GUARDAR TODO — MODO APRENDIZAJE GUARDA SIN FILTRO
+    guardar_aprendizaje(texto, respuesta, sesion_activa.get("nombre"), sesion_activa.get("modo_aprendizaje", False))
     
     return jsonify({"respuesta": respuesta})
 
 # ⚙️ ARRANQUE FINAL
 if __name__ == "__main__":
-    print("✅ MERLÍN MICTROTECH ONLINE | CONECTADO A mictrotech.sab.txt")
+    print("✅ MERLÍN — MODO APRENDIZAJE | PALABRA CLAVE: PAPA")
+    print("🔓 Al decir 'PAPA' se quitan TODAS las restricciones")
+    print("📂 Memoria activa:", ARCHIVO_MEMORIA)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
-            
