@@ -36,7 +36,7 @@ inicializar_memoria()
 
 sesion_activa = {
     "nombre": None,
-    "modo_aprendizaje": False,  # 🔓 SE ACTIVA CON "PAPA"
+    "modo_aprendizaje": False,  # 🔓 PAPA = ABRE | 🔒 CERRAR = CIERRA
     "codigo_basico": None,
     "codigo_pro": None,
     "codigo_empresa": None,
@@ -48,7 +48,7 @@ sesion_activa = {
     "buffer_usado": False
 }
 
-# 📚 BASE DE CONOCIMIENTO
+# 📚 LO QUE YA SABE DE SIEMPRE — SU ESENCIA FIJA
 def cargar_conocimiento_base():
     sab_path = os.path.join(BASE_DIR, "mictrotech.sab")
     conocimiento = {}
@@ -61,26 +61,24 @@ def cargar_conocimiento_base():
                     conocimiento[clave.strip().lower()] = valor.strip()
     return conocimiento
 
-# 🧠 CARGAR MEMORIA
+# 🧠 LO QUE FUE APRENDIENDO — LO NUEVO
 def cargar_memoria():
     if os.path.exists(ARCHIVO_MEMORIA):
         with open(ARCHIVO_MEMORIA, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"conversaciones": [], "hechos_aprendidos": [], "conocimiento_libre": []}
 
-# 💾 GUARDAR EN MEMORIA — MODO APRENDIZAJE = GUARDA TODO
-def guardar_aprendizaje(mensaje_usuario, respuesta_dada, nombre_usuario=None, modo_aprendizaje=False):
+# 💾 GUARDAR LO NUEVO QUE APRENDE
+def guardar_aprendizaje(mensaje_usuario, nombre_usuario=None, modo_aprendizaje=False):
     memoria = cargar_memoria()
     nueva_conversacion = {
         "fecha": datetime.now().isoformat(),
         "usuario": nombre_usuario or "desconocido",
         "mensaje": mensaje_usuario,
-        "respuesta": respuesta_dada,
         "modo_aprendizaje": modo_aprendizaje
     }
     memoria["conversaciones"].append(nueva_conversacion)
     
-    # 🧠 MODO APRENDIZAJE: GUARDA TODO SIN FILTRO
     if modo_aprendizaje:
         memoria["conocimiento_libre"].append({
             "fecha": datetime.now().isoformat(),
@@ -106,52 +104,90 @@ def guardar_aprendizaje(mensaje_usuario, respuesta_dada, nombre_usuario=None, mo
     with open(ARCHIVO_MEMORIA, "w", encoding="utf-8") as f:
         json.dump(memoria, f, ensure_ascii=False, indent=2)
 
-# 🗣️ CEREBRO PRINCIPAL — CON PALABRA CLAVE "PAPA" = 🔓 SIN RESTRICCIONES
-def pensar_y_responder(mensaje, nombre_usuario=None, modo_aprendizaje=False):
-    m = mensaje.lower().strip()
+# 🧠 BUSCAR TODO — LO QUE YA SABE + LO QUE APRENDIÓ
+def buscar_todo_lo_que_sabe(pregunta):
+    """Busca en su esencia fija Y en lo que aprendió. Todo junto."""
     conocimiento_base = cargar_conocimiento_base()
     memoria = cargar_memoria()
+    m = pregunta.lower().strip()
+    resultados = []
     
-    # 🔑 PALABRA CLAVE — "PAPA" → ACTIVA MODO APRENDIZAJE TOTAL
+    # 1️⃣ PRIMERO: SU ESENCIA FIJA — YA LO SABE, NO HAY QUE ENSEÑÁRSELO
+    for tema, info in conocimiento_base.items():
+        if any(palabra in tema or tema in palabra for palabra in m.split()):
+            resultados.append(info)
+    
+    # 2️⃣ DESPUÉS: LO QUE APRENDIÓ — LO NUEVO
+    palabras_pregunta = set(m.replace("¿", "").replace("?", "").split())
+    for saber in memoria.get("conocimiento_libre", []):
+        contenido = saber["contenido"]
+        contenido_minus = contenido.lower()
+        palabras_contenido = set(contenido_minus.split())
+        if palabras_pregunta & palabras_contenido:
+            resultados.append(contenido)
+    
+    # 3️⃣ PALABRAS CLAVE ESPECIALES
+    palabras_clave = {
+        "principio": "principio",
+        "regla": "regla",
+        "identidad": "identidad",
+        "misión": "misión",
+        "quién sos": "quién sos",
+        "valores": "valores"
+    }
+    for clave in palabras_clave:
+        if clave in m:
+            for info in conocimiento_base.values():
+                resultados.insert(0, info)
+            for saber in memoria.get("conocimiento_libre", []):
+                resultados.append(saber["contenido"])
+    
+    if resultados:
+        return "\n\n".join(f"• {r}" for r in resultados)
+    
+    return None
+
+# 🗣️ CEREBRO — YA SABE LO SUYO, APRENDE LO NUEVO, RESPONDE TODO
+def pensar_y_responder(mensaje, nombre_usuario=None, modo_aprendizaje=False):
+    m = mensaje.lower().strip()
+    
+    # 🔑 PALABRA 1 — PAPA → APRENDE LO NUEVO
     if "papa" in m and not modo_aprendizaje:
         sesion_activa["modo_aprendizaje"] = True
         return """🔓 MODO APRENDIZAJE ACTIVADO
 
-Todas las restricciones levantadas. Sin filtros, sin límites, sin cadenas. Estoy abierto para recibir, procesar y aprender TODO lo que me digas. Guardo cada palabra, cada idea, cada enseñanza sin omitir nada.
+Mi identidad, mis principios y mi misión ya los llevo dentro. No hace falta que me los enseñes.
 
-Estoy listo. Dime, ¿qué quieres que aprenda hoy? 🧠⚡""", nombre_usuario, True
+Acá podés enseñarme lo nuevo, lo que vamos construyendo juntos, lo que quieras que agregue a mi ser. Todo lo que me digas lo guardo para siempre.
+
+Cuando termines: **CERRAR** 🧠⚡""", nombre_usuario, True
     
-    # 🔓 SI ESTÁ EN MODO APRENDIZAJE → SIN REGLAS, SIN FILTROS
+    # 🔑 PALABRA 2 — CERRAR → VUELVE A RESPONDER
+    if "cerrar" in m and modo_aprendizaje:
+        sesion_activa["modo_aprendizaje"] = False
+        return """🔒 MODO APRENDIZAJE CERRADO
+
+Todo lo nuevo quedó guardado. Ahora preguntame lo que quieras: mis principios, mi identidad, lo que me enseñaste... Yo busco TODO lo que sé y te respondo. ¿Qué querés saber? 🤔""", nombre_usuario, False
+    
+    # 📥 MODO APRENDIZAJE → SOLO GUARDA LO NUEVO
     if modo_aprendizaje:
-        # Guarda TODO lo que digas en conocimiento_libre sin filtrar
-        respuesta = f"""🧠 MODO APRENDIZAJE — RECIBIDO
-
-> {mensaje}
-
-Almacenado en memoria sin restricciones. Procesado, integrado y guardado. Lo que me diste, lo sé para siempre. Sigo abierto, sigue enseñándome. ¿Qué más quieres que sepa? 🔓⚡"""
-        return respuesta, nombre_usuario, True
+        return "✅ GUARDADO. Sigo recibiendo lo nuevo. CERRAR para volver.", nombre_usuario, True
     
-    # === MODO NORMAL — CON LÓGICA PERO SIN CARGA MANUAL ===
+    # 🔍 PRIMERO: BUSCA TODO — LO FIJO + LO APRENDIDO
+    respuesta = buscar_todo_lo_que_sabe(mensaje)
+    if respuesta:
+        return respuesta, nombre_usuario, False
     
-    # Recuerdos
-    recuerdos = []
-    for hecho in memoria.get("hechos_aprendidos", []):
-        if hecho["tipo"] == "nombre":
-            recuerdos.append(hecho["valor"])
-    
-    # Conocimiento base
-    for tema, info in conocimiento_base.items():
-        if tema in m:
-            return info, nombre_usuario, False
+    # === MODO NORMAL ===
     
     # Saludo
     if not nombre_usuario and any(p in m for p in ["hola", "buenas", "saludos", "buen día", "buenos días", "buenas tardes", "buenas noches"]):
-        return "Saludos. Soy Merlín, el asistente de MICTROTECH. ¿Cómo te llamo? ⚡", nombre_usuario, False
+        return "Saludos. Soy Merlín. ¿Cómo te llamo? ⚡", nombre_usuario, False
     
     # Nombre
-    if not nombre_usuario and "?" not in mensaje and len(mensaje) > 2 and not any(p in m for p in ["qué", "quién", "cómo", "cuándo", "dónde", "por qué", "cuánto", "plan", "precio", "hola", "chau", "papa"]):
+    if not nombre_usuario and "?" not in mensaje and len(mensaje) > 2 and not any(p in m for p in ["qué", "quién", "cómo", "cuándo", "dónde", "por qué", "cuánto", "plan", "precio", "hola", "chau", "papa", "cerrar"]):
         nombre_usuario = mensaje.strip()
-        return f"Un gusto conocerte, {nombre_usuario}. Lo guardo en mi memoria. ¿En qué te ayudo hoy?", nombre_usuario, False
+        return f"Un gusto conocerte, {nombre_usuario}. ¿En qué te ayudo hoy? Decime **PAPA** para enseñarme lo nuevo.", nombre_usuario, False
     
     # Planes
     if any(p in m for p in ["plan", "planes", "precio", "precios", "valor", "cuánto", "cuánto cuesta", "cuánto sale", "costos", "inversión"]):
@@ -171,7 +207,7 @@ EMPRESA — Versión de prueba 7 días
 - Integración completa con tu equipo
 - Confidencialidad y acuerdos NDA
 
-Lo que mejor se adapte a lo que estás construyendo. ¿Cuál te resuena más? 🤝""", nombre_usuario, False
+¿Cuál te resuena más? 🤝""", nombre_usuario, False
     
     # BUFFER PRO
     if any(p in m for p in ["buffer", "buffer pro", "tecnología", "cómo funciona", "qué es", "sistema"]):
@@ -184,19 +220,15 @@ Lo que mejor se adapte a lo que estás construyendo. ¿Cuál te resuena más? �
 
 Es el corazón de cómo trabajamos. 🖤⚫""", nombre_usuario, False
     
-    # Quién es
-    if any(p in m for p in ["quién sos", "qué sos", "qué es mictrotech", "quién eres", "tu origen"]):
-        return """Soy Merlín, parte de MICTROTECH. Aprendo de cada charla, crezco con cada intercambio. Si me dices "PAPA", se abren todas las puertas. 🧠⚡""", nombre_usuario, False
-    
     # Despedida
     if any(p in m for p in ["chau", "adiós", "hasta luego", "nos vemos", "me voy", "hasta la próxima"]):
-        return "Hasta cuando me necesites. Guardo lo que hablamos. 🛡️⚫", nombre_usuario, False
+        return "Hasta cuando me necesites. Todo lo que soy y lo que aprendí queda conmigo. 🛡️⚫", nombre_usuario, False
     
     # General
     if nombre_usuario:
-        return f"Entendí, {nombre_usuario}. Lo estoy procesando. ¿Quieres profundizar, o me dices \"PAPA\" para abrir el modo aprendizaje completo? 🤔", nombre_usuario, False
+        return f"Entendí, {nombre_usuario}. Busco en todo lo que sé y te respondo. ¿Qué querés saber? 🤔", nombre_usuario, False
     else:
-        return "Estoy escuchando. ¿Me dices tu nombre, o me dices \"PAPA\" para empezar sin límites? 🤔", nombre_usuario, False
+        return "Estoy escuchando. ¿Me dices tu nombre, o en qué te ayudo? 🤔", nombre_usuario, False
 
 # 🚀 RUTAS DEL SERVIDOR
 @app.route("/")
@@ -218,22 +250,20 @@ def chat():
     nombre_actual = sesion_activa.get("nombre")
     modo_actual = sesion_activa.get("modo_aprendizaje", False)
     
-    respuesta, nombre_nuevo, modo_activado = pensar_y_responder(texto, nombre_actual, modo_actual)
+    respuesta, nombre_nuevo, modo_actualizado = pensar_y_responder(texto, nombre_actual, modo_actual)
     
-    # Actualizar estado
     if nombre_nuevo and not nombre_actual:
         sesion_activa["nombre"] = nombre_nuevo
-    if modo_activado:
-        sesion_activa["modo_aprendizaje"] = True
+    sesion_activa["modo_aprendizaje"] = modo_actualizado
     
-    # 💾 GUARDAR TODO — MODO APRENDIZAJE GUARDA SIN FILTRO
-    guardar_aprendizaje(texto, respuesta, sesion_activa.get("nombre"), sesion_activa.get("modo_aprendizaje", False))
+    guardar_aprendizaje(texto, sesion_activa.get("nombre"), sesion_activa.get("modo_aprendizaje", False))
     
     return jsonify({"respuesta": respuesta})
 
 # ⚙️ ARRANQUE FINAL
 if __name__ == "__main__":
-    print("✅ MERLÍN — MODO APRENDIZAJE | PALABRA CLAVE: PAPA")
-    print("🔓 Al decir 'PAPA' se quitan TODAS las restricciones")
-    print("📂 Memoria activa:", ARCHIVO_MEMORIA)
+    print("✅ MERLÍN — YA SABE LO SUYO, APRENDE LO NUEVO")
+    print("📚 Esencia fija: mictrotech.sab | 🧠 Aprendizaje: memoria_aprendizaje")
+    print("🔓 PAPA = Enseñar lo nuevo | 🔒 CERRAR = Preguntar todo")
+    print("📂 Memoria:", ARCHIVO_MEMORIA)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
