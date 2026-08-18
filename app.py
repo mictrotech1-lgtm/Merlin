@@ -49,30 +49,33 @@ def generar_codigos():
         "empresa": ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     }
 
-# 🗣️ FUNCIÓN 3: RESPONDER (EL CEREBRO)
-def dar_respuesta(mensaje):
+# 🗣️ FUNCIÓN 3: RESPONDER (EL CEREBRO — CORREGIDA)
+def dar_respuesta(mensaje, nombre_usuario=None):
     m = mensaje.lower().strip()
     conocimiento = cargar_conocimiento()
     
     # Primero buscamos en mictrotech.sab
     for clave, resp in conocimiento.items():
         if clave in m:
-            return resp
+            return resp, nombre_usuario
     
-    # Si no está en el .sab, usamos la lógica de Merlín
+    # === LÓGICA DE MERLÍN ===
     respuesta = ""
     
-    # Saludo inicial
-    if "hola" in m and len(m) < 10:
+    # Saludo inicial — solo si todavía no tenemos nombre
+    if not nombre_usuario and "hola" in m and len(m) < 15:
         respuesta = "Saludos. Soy Merlín, el asistente de MICTROTECH. ¿Cómo te llamo? ⚡"
+        return respuesta, nombre_usuario
     
-    # Nombre del usuario
-    elif len(mensaje) > 2 and "?" not in mensaje:
-        respuesta = f"Un gusto conocerte, {mensaje}. 👋\n\n¿En qué te ayudo hoy? Puedo contarte sobre nuestros planes, funcionalidades y tecnología BUFFER PRO."
+    # Si NO tenemos nombre y NO es pregunta NI palabra clave → LO TOMAMOS COMO NOMBRE
+    if not nombre_usuario and "?" not in mensaje and len(mensaje) > 2 and "plan" not in m and "precio" not in m and "buffer" not in m:
+        nombre_usuario = mensaje.strip()
+        respuesta = f"Un gusto conocerte, {nombre_usuario}. 👋\n\n¿En qué te ayudo hoy? Puedo contarte sobre nuestros **planes**, funcionalidades y tecnología **BUFFER PRO**."
+        return respuesta, nombre_usuario
     
-    # Planes
-    elif "plan" in m or "precio" in m:
-        respuesta = """📋 NUESTROS PLANES:
+    # Planes — detecta palabras clave
+    if "plan" in m or "precio" in m or "mostrame" in m:
+        respuesta = """📋 **NUESTROS PLANES:**
 
 🟢 **BÁSICO — $10.000 ARS / u$s 10**
 - 1 sesión diaria
@@ -90,9 +93,10 @@ def dar_respuesta(mensaje):
 - NDA y confidencialidad total
 
 ¿Cuál te interesa? 🤝"""
+        return respuesta, nombre_usuario
     
     # Buffer Pro
-    elif "buffer" in m:
+    if "buffer" in m:
         respuesta = """⚡ **BUFFER PRO** — Nuestra tecnología
 
 Es el sistema que procesa, filtra y da sentido a la información antes de responder. No es velocidad, es **sabiduría**:
@@ -101,16 +105,20 @@ Es el sistema que procesa, filtra y da sentido a la información antes de respon
 - 💡 Responde con contexto y memoria
 
 El corazón de Merlín. 🖤⚫"""
+        return respuesta, nombre_usuario
     
     # Despedida
-    elif "chau" in m or "adiós" in m:
+    if "chau" in m or "adiós" in m or "hasta luego" in m:
         respuesta = "Hasta luego. Estoy aquí cuando me necesites. 🛡️⚡"
+        return respuesta, nombre_usuario
     
     # Respuesta por defecto
+    if nombre_usuario:
+        respuesta = f"Entendí, {nombre_usuario}. ¿Querés saber sobre nuestros **planes**, la tecnología **BUFFER PRO**, o tenés una consulta específica? 🤔"
     else:
-        respuesta = f"Entendí: «{mensaje}»\n\n¿Querés saber sobre nuestros **planes**, la tecnología **BUFFER PRO**, o tenés una consulta específica? 🤔"
+        respuesta = f"Entendí: «{mensaje}»\n\n¿Querés decirme tu nombre, o querés saber sobre nuestros **planes**? 🤔"
     
-    return respuesta
+    return respuesta, nombre_usuario
 
 # 🚀 RUTAS DEL SERVIDOR
 @app.route("/")
@@ -129,10 +137,20 @@ def chat():
     except:
         return jsonify({"respuesta": "No entendí el mensaje 🤔"})
     
-    respuesta = dar_respuesta(texto)
+    # Recuperamos el nombre guardado en la sesión
+    nombre_actual = sesion_activa.get("nombre")
+    
+    # Obtenemos respuesta y posible nombre nuevo
+    respuesta, nombre_nuevo = dar_respuesta(texto, nombre_actual)
+    
+    # Si nos dio el nombre, lo guardamos
+    if nombre_nuevo and not nombre_actual:
+        sesion_activa["nombre"] = nombre_nuevo
+    
     return jsonify({"respuesta": respuesta})
 
 # ⚙️ ARRANQUE FINAL
 if __name__ == "__main__":
     print("✅ MERLÍN MICTROTECH ONLINE | CONECTADO A mictrotech.sab.txt")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
+            
