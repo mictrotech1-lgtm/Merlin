@@ -53,10 +53,64 @@ def generar_codigos():
 def dar_respuesta(mensaje):
     m = mensaje.lower().strip()
     conocimiento = cargar_conocimiento()
+    
+    # Primero buscamos en mictrotech.sab
     for clave, resp in conocimiento.items():
         if clave in m:
             return resp
-    return "🧙‍♂️ Estoy procesando tu consulta con nuestra tecnología BUFFER PRO..."
+    
+    # Si no está en el .sab, usamos la lógica de Merlín
+    respuesta = ""
+    
+    # Saludo inicial
+    if "hola" in m and len(m) < 10:
+        respuesta = "Saludos. Soy Merlín, el asistente de MICTROTECH. ¿Cómo te llamo? ⚡"
+    
+    # Nombre del usuario
+    elif len(mensaje) > 2 and "?" not in mensaje:
+        respuesta = f"Un gusto conocerte, {mensaje}. 👋\n\n¿En qué te ayudo hoy? Puedo contarte sobre nuestros planes, funcionalidades y tecnología BUFFER PRO."
+    
+    # Planes
+    elif "plan" in m or "precio" in m:
+        respuesta = """📋 NUESTROS PLANES:
+
+🟢 **BÁSICO — $10.000 ARS / u$s 10**
+- 1 sesión diaria
+- 2 consultas BUFFER PRO
+- Guardado de sesión
+
+🔵 **PRO — $50.000 ARS / u$s 50**
+- Sesiones ilimitadas
+- Acceso total a BUFFER PRO
+- Personalización completa
+- Soporte prioritario
+
+🏢 **EMPRESA — DEMO 7 DÍAS**
+- Todo PRO + integración propia
+- NDA y confidencialidad total
+
+¿Cuál te interesa? 🤝"""
+    
+    # Buffer Pro
+    elif "buffer" in m:
+        respuesta = """⚡ **BUFFER PRO** — Nuestra tecnología
+
+Es el sistema que procesa, filtra y da sentido a la información antes de responder. No es velocidad, es **sabiduría**:
+- 🧠 Piensa antes de hablar
+- 🛡️ Filtra ruido y detecta lo importante
+- 💡 Responde con contexto y memoria
+
+El corazón de Merlín. 🖤⚫"""
+    
+    # Despedida
+    elif "chau" in m or "adiós" in m:
+        respuesta = "Hasta luego. Estoy aquí cuando me necesites. 🛡️⚡"
+    
+    # Respuesta por defecto
+    else:
+        respuesta = f"Entendí: «{mensaje}»\n\n¿Querés saber sobre nuestros **planes**, la tecnología **BUFFER PRO**, o tenés una consulta específica? 🤔"
+    
+    return respuesta
 
 # 🚀 RUTAS DEL SERVIDOR
 @app.route("/")
@@ -69,7 +123,12 @@ def recursos_estaticos(p):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    texto = request.json.get("mensaje", "")
+    try:
+        data = request.get_json()
+        texto = data.get("mensaje", "")
+    except:
+        return jsonify({"respuesta": "No entendí el mensaje 🤔"})
+    
     respuesta = dar_respuesta(texto)
     return jsonify({"respuesta": respuesta})
 
