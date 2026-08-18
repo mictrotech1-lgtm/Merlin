@@ -1,4 +1,3 @@
-templates/index.html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,16 +10,24 @@ templates/index.html
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root { --verde: #00FF88; --azul: #00D4FF; --fondo: #050508; }
 
+/* 🛡️ BLOQUEO TOTAL DE COPIA */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+body { -webkit-touch-callout: none; }
+
 html, body {
   background: var(--fondo);
   color: #fff;
   font-family: Arial, sans-serif;
   height: 100%;
-  overflow-y: auto; /* SCROLL PARA TVBOX */
+  overflow-y: auto;
   scroll-behavior: smooth;
 }
 
-/* FOCO PARA CONTROL REMOTO */
 *:focus {
   outline: 3px solid var(--verde);
   outline-offset: 2px;
@@ -29,7 +36,7 @@ html, body {
 
 .header {
   width: 100%;
-  background: #fff;
+  background: #050508;
   min-height: 35vh;
   display: flex;
   align-items: center;
@@ -74,7 +81,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 20px 120px 20px; /* ESPACIO ABAJO PARA BOTON FLOTANTE */
+  padding: 20px 20px 120px 20px;
   min-height: calc(100vh - 35vh - 4px);
 }
 
@@ -135,7 +142,6 @@ h1 {
   box-shadow: 0 0 30px var(--verde);
 }
 
-/* MENÚS OCULTOS */
 #asistente, #productos { display: none; margin-top: 25px; width: 90%; max-width: 420px; }
 
 #productos { 
@@ -156,7 +162,6 @@ h1 {
   box-shadow: 0 0 20px var(--verde);
 }
 
-/* BOTÓN FLOTANTE CHAT */
 .chat-float {
   position: fixed;
   bottom: 20px;
@@ -174,7 +179,6 @@ h1 {
   cursor: pointer;
 }
 
-/* ===== VENTANA DE CHAT ===== */
 #chat-merlin {
   display: none;
   position: fixed;
@@ -188,7 +192,7 @@ h1 {
   border-radius: 16px;
   z-index: 999;
   flex-direction: column;
-  box-shadow: 0 0 30px rgba(0,255,136,0.3);
+  box-shadow: 0 0 30px rgba(255,255,255,0.05);
 }
 .chat-header {
   display: flex;
@@ -201,7 +205,7 @@ h1 {
 }
 .chat-avatar {
   width: 40px; height: 40px; border-radius: 50%;
-  background: url('merlin.jpg') center/cover; /* PONÉ TU IMAGEN ACÁ */
+  background: url('/static/merlin.jpg') center/cover;
   border: 2px solid var(--verde);
   box-shadow: 0 0 10px var(--verde);
 }
@@ -219,7 +223,7 @@ h1 {
 
 .chat-mensajes {
   flex: 1;
-  overflow-y: auto; /* SCROLL DENTRO DEL CHAT */
+  overflow-y: auto;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -228,6 +232,16 @@ h1 {
 .msg { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
 .msg.yo { background: #1c2c3c; align-self: flex-end; border-bottom-right-radius: 4px; border-left: 2px solid var(--azul); }
 .msg.bot { background: #151515; align-self: flex-start; border-bottom-left-radius: 4px; border-left: 2px solid var(--verde); }
+
+.buffer-pro {
+  color: var(--azul);
+  background: rgba(0,212,255,0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-shadow: 0 0 5px var(--azul);
+}
+.pensando { font-style: italic; color: var(--azul); }
 
 .chat-input {
   display: flex; gap: 8px; padding: 12px; border-top: 1px solid #222;
@@ -242,7 +256,6 @@ h1 {
   color: black; font-weight: bold; font-size: 18px; cursor: pointer;
 }
 
-/* SCROLLBAR PARA TV */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: var(--verde); border-radius: 10px; }
@@ -251,7 +264,7 @@ h1 {
 <body>
 
 <div class="header">
-  <img src="logo.png" alt="MICTROTECH" class="logo">
+  <img src="/static/logo.png" alt="MICTROTECH" class="logo">
 </div>
 
 <div class="scanner-line"></div>
@@ -283,10 +296,8 @@ h1 {
   </div>
 </div>
 
-<!-- BOTÓN FLOTANTE -->
 <button onclick="abrirChat()" class="chat-float">💬 CHAT</button>
 
-<!-- VENTANA DE CHAT -->
 <div id="chat-merlin">
   <div class="chat-header">
     <div class="chat-avatar"></div>
@@ -297,7 +308,7 @@ h1 {
     <button onclick="cerrarChat()" class="btn-cerrar">✕</button>
   </div>
   <div class="chat-mensajes" id="zona-chat">
-    <div class="msg bot">Saludos. Soy Merlín. ¿En qué te ayudo hoy? ⚡</div>
+    <div class="msg bot">Saludos. Soy Merlín. ¿Cómo te llamo? ⚡</div>
   </div>
   <div class="chat-input">
     <input type="text" id="texto" placeholder="Escribí tu mensaje...">
@@ -306,6 +317,9 @@ h1 {
 </div>
 
 <script>
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('contextmenu', e => e.preventDefault());
+
 function cerrarMenus() {
   document.getElementById('productos').style.display = 'none';
   document.getElementById('asistente').style.display = 'none';
@@ -319,11 +333,10 @@ function mostrarProductos() {
   else { cerrarMenus(); document.getElementById('productos').style.display = 'flex'; }
 }
 
-// FUNCIONES DEL CHAT
 function abrirChat() {
   cerrarMenus();
   document.getElementById('chat-merlin').style.display = 'flex';
-  document.getElementById('texto').focus(); // FOCO PARA TV
+  document.getElementById('texto').focus();
 }
 function cerrarChat() {
   document.getElementById('chat-merlin').style.display = 'none';
@@ -333,21 +346,52 @@ async function enviar(){
     let t = document.getElementById("texto").value.trim();
     if(!t) return;
     let zona = document.getElementById("zona-chat");
+    
     zona.innerHTML += `<div class="msg yo">${t}</div>`;
     document.getElementById("texto").value = "";
-    zona.scrollTop = zona.scrollHeight; // AUTO SCROLL
+    zona.scrollTop = zona.scrollHeight;
 
-    setTimeout(() => {
-      zona.innerHTML += `<div class="msg bot">Merlín: Recibí "${t}". Próximamente te respondo con IA posta.</div>`;
-      zona.scrollTop = zona.scrollHeight;
-    }, 600);
+    const pensando = document.createElement('div');
+    pensando.className = 'msg bot pensando';
+    pensando.innerHTML = 'Usando tecnología <span class="buffer-pro">BUFFER PRO</span>...';
+    zona.appendChild(pensando);
+    zona.scrollTop = zona.scrollHeight;
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensaje: t })
+      });
+      const datos = await res.json();
+      pensando.remove();
+      
+      if(datos.respuesta) {
+        zona.innerHTML += `<div class="msg bot">${datos.respuesta}</div>`;
+      }
+      
+      if(datos.final_demo) {
+        document.querySelector('.chat-input').style.display = 'none';
+        if(datos.codigo_demo) {
+          zona.innerHTML += `<div style="color:#ffcc00; padding:12px; border:1px solid #ffcc00; border-radius:8px; margin-top:10px;">
+            ⏱️ <strong>FIN DE LA VERSIÓN DEMO</strong><br>
+            Código: <span style="font-size:20px; color:#00FF88; font-weight:bold;">${datos.codigo_demo}</span><br>
+            Envía el código para continuar con el plan completo.
+          </div>`;
+        }
+      }
+    } catch(err) {
+      pensando.remove();
+      zona.innerHTML += `<div class="msg bot">⚠️ Error de conexión. Probá de nuevo.</div>`;
+    }
+    
+    zona.scrollTop = zona.scrollHeight;
 }
 
 document.getElementById("texto").addEventListener("keydown", e=>{
     if(e.key=="Enter") enviar();
 });
 
-// NAVEGACION CON FLECHAS PARA TVBOX
 document.addEventListener('keydown', function(e) {
   if(e.key === 'Escape') cerrarChat();
 });
