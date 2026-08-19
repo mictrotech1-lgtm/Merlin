@@ -354,12 +354,3 @@ def chat():
     
     return jsonify({"respuesta": respuesta})
 
-# ⚙️ ARRANQUE FINAL
-if __name__ == "__main__":
-    print("✅ MERLÍN — CON REINICIO + CÓDIGO REAL + PRECIOS POR PAÍS + MODO APRENDIZAJE")
-    print("🔄 REINICIAR = Empieza de cero (NO borra lo aprendido)")
-    print("🔓 PAPA = Enseñar | 🔒 CERRAR = Preguntar")
-    print("🎫 Código de acceso: 8 caracteres al azar")
-    print("💰 Precios: ARS (Argentina) / USD (Exterior)")
-    print("📂 Memoria:", ARCHIVO_MEMORIA)
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
